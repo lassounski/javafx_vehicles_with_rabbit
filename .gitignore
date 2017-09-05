@@ -1,0 +1,38 @@
+.DS_Store
+target/
+!**.mvn/wrapper/maven-wrapper.jar
+
+### STS ###
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+## Ignore Custom Properties Files ##
+application-*.properties
+## Un-ignore properties files in e2e ##
+!catapult-messaging-e2e/**/*.properties
+
+## Logs ##
+*.log
+
+.gitignore
+pom.xml
+rabbitmq/
+vehicle/
+vehicleUi/
