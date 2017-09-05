@@ -32,7 +32,3 @@ application-*.properties
 *.log
 
 .gitignore
-pom.xml
-rabbitmq/
-vehicle/
-vehicleUi/
