@@ -1,22 +1,19 @@
 package com.delaru.ui;
 
 import com.delaru.model.Command;
-import com.delaru.rabbitmq.Producer;
-
+import com.delaru.model.CommandType;
+import com.delaru.model.DestroyCommand;
+import com.delaru.model.MovementCommand;
+import com.delaru.model.VehicleMovement;
+import com.delaru.model.VehicleStatus;
+import com.delaru.rabbitmq.CommandProducer;
 import de.felixroske.jfxsupport.FXMLController;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -30,28 +27,24 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @FXMLController
 public class Controller implements Initializable {
 
-    enum Direction {
-        LEFT, RIGHT, UP, DOWN, STOP
-    }
+    private Map<String, VehicleStatus> vehicles = new HashMap<>();
 
-    private int vehicleIdCounter = 1;
-
-    private Map<String, Node> vehicles = new HashMap<>();
-    private Map<String, Direction> movingVehicles = new ConcurrentHashMap<>();
-
-    private ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private Map<String, Node> paneVehicles = new HashMap<>();
 
     private ToggleGroup directionsGroup = new ToggleGroup();
 
-    @FXML
-    Pane world;
+    private ExecutorService vehicleExecutorService = Executors.newFixedThreadPool(10);
 
     @FXML
-    ComboBox<String> vehicleId;
+    Pane pane;
+
+    @FXML
+    ComboBox<String> vehicleIdCombo;
 
     @FXML
     RadioButton rightDirection;
@@ -69,20 +62,12 @@ public class Controller implements Initializable {
     RadioButton stop;
 
     @Autowired
-    private Producer<Command> commandProducer;
+    private CommandProducer commandProducer;
 
     @FXML
     private void createVehicleAction(ActionEvent event) {
-        String lastVehicleId = Integer.toString(vehicleIdCounter);
-        Node vehicle = createVehicle(lastVehicleId);
-
-        world.getChildren().add(vehicle);
-        vehicles.put(lastVehicleId, vehicle);
-        movingVehicles.put(lastVehicleId, Direction.STOP);
-        executorService.execute(new MovingVehicle(lastVehicleId));
-        vehicleId.getItems().add(lastVehicleId);
-
-        vehicleIdCounter++;
+        Command create = new Command(CommandType.CREATE);
+        commandProducer.produce(create);
     }
 
     private Node createVehicle(String vehicleId) {
@@ -102,15 +87,17 @@ public class Controller implements Initializable {
 
     @FXML
     private void removeVehicle() {
-        world.getChildren().removeAll(vehicles.get(vehicleId.getValue()));
-        vehicles.remove(vehicleId.getValue());
-        movingVehicles.remove(vehicleId.getValue());
+        pane.getChildren().removeAll(paneVehicles.get(vehicleIdCombo.getValue()));
+        paneVehicles.remove(vehicleIdCombo.getValue());
+
+        DestroyCommand removeCommand = new DestroyCommand(vehicleIdCombo.getValue());
+        commandProducer.produce(removeCommand);
     }
 
     @FXML
     private void onVehicleChange() {
-        String vehichleId = vehicleId.getValue();
-        switch (movingVehicles.get(vehichleId)) {
+        String selectedVehicleId = vehicleIdCombo.getValue();
+        switch (vehicles.get(selectedVehicleId).getVehicleMovement()) {
             case UP:
                 upDirection.fire();
                 break;
@@ -128,46 +115,6 @@ public class Controller implements Initializable {
         }
     }
 
-    class MovingVehicle extends Thread {
-
-        private String id;
-
-        public MovingVehicle(String id) {
-            this.id = id;
-            this.setDaemon(true);
-        }
-
-        @Override
-        public void run() {
-            System.out.println("Vehicle running in " + Thread.currentThread().getName());
-            while (movingVehicles.containsKey(id)) {
-                Node vehicle = vehicles.get(id);
-                switch (movingVehicles.get(id)) {
-                    case UP:
-                        vehicle.setTranslateY(vehicle.getTranslateY() - 1);
-                        break;
-                    case DOWN:
-                        vehicle.setTranslateY(vehicle.getTranslateY() + 1);
-                        break;
-                    case LEFT:
-                        vehicle.setTranslateX(vehicle.getTranslateX() - 1);
-                        break;
-                    case RIGHT:
-                        vehicle.setTranslateX(vehicle.getTranslateX() + 1);
-                        break;
-                    default:
-                        break;
-                }
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-            System.out.println("Vehicle in " + Thread.currentThread().getName() + " is dead");
-        }
-    }
-
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         rightDirection.setToggleGroup(directionsGroup);
@@ -178,8 +125,30 @@ public class Controller implements Initializable {
         stop.setSelected(true);
 
         directionsGroup.selectedToggleProperty().addListener((observable, oldValue, newValue) -> {
-            Direction direction = Direction.valueOf(((RadioButton) newValue).getText());
-            movingVehicles.put(vehicleId.getValue(), direction);
+            VehicleMovement vehicleMovement = VehicleMovement.valueOf(((RadioButton) newValue).getText());
+            MovementCommand movementCommand = new MovementCommand(vehicleMovement, vehicleIdCombo.getValue());
+
+            commandProducer.produce(movementCommand);
+        });
+    }
+
+    public void handleVehicle(VehicleStatus vehicleStatus) {
+        vehicleExecutorService.execute(() -> {
+            String vehicleId = vehicleStatus.getVehicleId();
+
+            if (vehicles.containsKey(vehicleId)) {
+                Node vehicle = paneVehicles.get(vehicleId);
+
+                vehicle.setTranslateX(vehicleStatus.getX());
+                vehicle.setTranslateY(vehicleStatus.getY());
+            } else {
+                vehicles.put(vehicleId, vehicleStatus);
+                Node vehicle = createVehicle(vehicleId);
+
+                pane.getChildren().add(vehicle);
+                paneVehicles.put(vehicleId, vehicle);
+                vehicleIdCombo.getItems().add(vehicleId);
+            }
         });
     }
 }

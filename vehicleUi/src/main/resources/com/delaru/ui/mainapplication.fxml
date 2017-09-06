@@ -28,6 +28,6 @@
             <ComboBox fx:id="vehicleId" layoutX="107.0" layoutY="47.0" onAction="#onVehicleChange" prefHeight="25.0" prefWidth="58.0" />
          </children>
       </Pane>
-      <Pane fx:id="world" layoutX="-1.0" layoutY="125.0" prefHeight="309.0" prefWidth="511.0" />
+      <Pane fx:id="pane" layoutX="-1.0" layoutY="125.0" prefHeight="309.0" prefWidth="511.0" />
     </children>
 </AnchorPane>
