@@ -9,5 +9,5 @@ public abstract class Vehicle {
     private String id;
     private int x, y;
     private boolean isMoving;
-    private Direction movingDirection;
+    private VehicleMovement movingVehicleMovement;
 }

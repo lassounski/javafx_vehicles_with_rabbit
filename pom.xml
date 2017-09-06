@@ -20,9 +20,11 @@
         <module>vehicle</module>
         <module>vehicleUi</module>
         <module>rabbitmq</module>
+        <module>model</module>
     </modules>
 
     <properties>
+        <java.version>1.8</java.version>
         <org.immutables.version>2.3.7</org.immutables.version>
         <amqp-client.version>3.0.4</amqp-client.version>
         <commons-lang.version>2.6</commons-lang.version>
@@ -48,4 +50,23 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerVersion>${java.version}</compilerVersion>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+
+                    <!-- Prevents an endPosTable exception during compilation -->
+                    <!-- This is required for org.immutables to generate the Immutable classes -->
+                    <!-- Check https://immutables.github.io/getstarted.html#troubleshooting -->
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

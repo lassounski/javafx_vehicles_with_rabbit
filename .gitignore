@@ -23,12 +23,6 @@ dist/
 nbdist/
 .nb-gradle/
 
-## Ignore Custom Properties Files ##
-application-*.properties
-## Un-ignore properties files in e2e ##
-!catapult-messaging-e2e/**/*.properties
-
 ## Logs ##
 *.log
-
 .gitignore
