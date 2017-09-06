@@ -1,5 +1,12 @@
 package com.delaru.ui;
 
+import com.delaru.model.Command;
+import com.delaru.rabbitmq.Producer;
+
+import de.felixroske.jfxsupport.FXMLController;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,14 +16,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.RadioButton;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -25,11 +31,12 @@ import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 
-public class FXMLController implements Initializable {
+@FXMLController
+public class Controller implements Initializable {
 
     enum Direction {
         LEFT, RIGHT, UP, DOWN, STOP
-    };
+    }
 
     private int vehicleIdCounter = 1;
 
@@ -60,6 +67,9 @@ public class FXMLController implements Initializable {
 
     @FXML
     RadioButton stop;
+
+    @Autowired
+    private Producer<Command> commandProducer;
 
     @FXML
     private void createVehicleAction(ActionEvent event) {
@@ -151,7 +161,7 @@ public class FXMLController implements Initializable {
                 try {
                     Thread.sleep(200);
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(FXMLController.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
             System.out.println("Vehicle in " + Thread.currentThread().getName() + " is dead");
@@ -159,7 +169,7 @@ public class FXMLController implements Initializable {
     }
 
     @Override
-    public void initialize(URL url, ResourceBundle rb) {
+    public void initialize(URL location, ResourceBundle resources) {
         rightDirection.setToggleGroup(directionsGroup);
         leftDirection.setToggleGroup(directionsGroup);
         upDirection.setToggleGroup(directionsGroup);
