@@ -13,7 +13,6 @@ public class CommandConsumer {
 
     @RabbitListener(queues = "${com.delaru.rabbitmq.consumer.commands.queue}", containerFactory = "vehicleFactory")
     public void recieveMessage(Command object) {
-        System.out.println("Consuming message "+object);
         messageConsumer.accept(object);
     }
 }

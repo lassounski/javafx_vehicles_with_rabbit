@@ -14,8 +14,13 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Service responsible for calculating the position of the vehicles, each vehicle runs on a thread.
+ */
 @Service
 public class CommandService {
+
+    private final static org.apache.log4j.Logger LOGGER = org.apache.log4j.Logger.getLogger(Controller.class);
 
     private int vehicleIdCounter = 1;
 
@@ -26,29 +31,45 @@ public class CommandService {
     @Autowired
     private VehicleStatusProducer vehicleStatusProducer;
 
+    /**
+     * Creates a new vehicle
+     */
     public void createVehicle() {
         String lastVehicleId = Integer.toString(vehicleIdCounter);
 
-        System.out.println("Creating vehicle " + lastVehicleId);
         executorService.execute(new MovingVehicle(lastVehicleId));
         movingVehicles.put(lastVehicleId, new VehicleStatus(lastVehicleId));
         vehicleIdCounter++;
     }
 
+    /**
+     * Destroys a vehicle
+     *
+     * @param command for destruction
+     */
     public void destroyVehicle(Command command) {
-        System.out.println("Destroying vehicle " + command.getVehicleId());
+        LOGGER.debug("Destroying vehicle " + command.getVehicleId());
         movingVehicles.remove(command.getVehicleId());
     }
 
+    /**
+     * Changes the vehicle position
+     *
+     * @param command for movement
+     */
     public void moveVehicle(Command command) {
         if (movingVehicles.containsKey(command.getVehicleId())) {
-            System.out.println(String.format("Moving vehicle %s to %s", command.getVehicleId(), command
+            LOGGER.debug(String.format("Moving vehicle %s to %s", command.getVehicleId(), command
                 .getVehicleMovement()));
             VehicleStatus vehicleStatus = movingVehicles.get(command.getVehicleId());
             vehicleStatus.setVehicleMovement(command.getVehicleMovement());
         }
     }
 
+    /**
+     * Thread that calculates the vehicle position and puts a message in
+     * the movement queue for the front-end
+     */
     class MovingVehicle extends Thread {
 
         private String id;
@@ -60,10 +81,9 @@ public class CommandService {
 
         @Override
         public void run() {
-            System.out.println("Vehicle running in " + Thread.currentThread().getName());
+            LOGGER.debug("Vehicle running in " + Thread.currentThread().getName());
             while (movingVehicles.containsKey(id)) {
                 VehicleStatus movingVehicle = movingVehicles.get(id);
-                System.out.println("Moving vehicle " + movingVehicle.getVehicleMovement());
                 switch (movingVehicles.get(id).getVehicleMovement()) {
                     case UP:
                         movingVehicle.setY(movingVehicle.getY() - movingVehicle.getSpeed());
@@ -87,7 +107,7 @@ public class CommandService {
                     Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
-            System.out.println("Vehicle in " + Thread.currentThread().getName() + " is dead");
+            LOGGER.debug("Vehicle in " + Thread.currentThread().getName() + " is dead");
         }
     }
 }

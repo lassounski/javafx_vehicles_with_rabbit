@@ -14,7 +14,6 @@ public class VehicleStatusConsumer {
     @RabbitListener(queues = "${com.delaru.rabbitmq.consumer.vehicle.status.queue}",
             containerFactory ="vehicleFactory")
     public void recieveMessage(VehicleStatus message) {
-        System.out.println("Consuming message "+message);
         messageConsumer.accept(message);
     }
 }
