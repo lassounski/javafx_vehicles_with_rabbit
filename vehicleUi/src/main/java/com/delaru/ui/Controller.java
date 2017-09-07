@@ -2,18 +2,23 @@ package com.delaru.ui;
 
 import com.delaru.model.Command;
 import com.delaru.model.CommandType;
-import com.delaru.model.DestroyCommand;
-import com.delaru.model.MovementCommand;
 import com.delaru.model.VehicleMovement;
 import com.delaru.model.VehicleStatus;
 import com.delaru.rabbitmq.CommandProducer;
+
 import de.felixroske.jfxsupport.FXMLController;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -27,7 +32,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @FXMLController
 public class Controller implements Initializable {
@@ -90,7 +94,7 @@ public class Controller implements Initializable {
         pane.getChildren().removeAll(paneVehicles.get(vehicleIdCombo.getValue()));
         paneVehicles.remove(vehicleIdCombo.getValue());
 
-        DestroyCommand removeCommand = new DestroyCommand(vehicleIdCombo.getValue());
+        Command removeCommand = new Command(CommandType.DESTROY, vehicleIdCombo.getValue());
         commandProducer.produce(removeCommand);
     }
 
@@ -126,29 +130,52 @@ public class Controller implements Initializable {
 
         directionsGroup.selectedToggleProperty().addListener((observable, oldValue, newValue) -> {
             VehicleMovement vehicleMovement = VehicleMovement.valueOf(((RadioButton) newValue).getText());
-            MovementCommand movementCommand = new MovementCommand(vehicleMovement, vehicleIdCombo.getValue());
+            Command movementCommand = new Command(CommandType.MOVEMENT, vehicleIdCombo.getValue(), vehicleMovement);
 
             commandProducer.produce(movementCommand);
         });
     }
 
     public void handleVehicle(VehicleStatus vehicleStatus) {
-        vehicleExecutorService.execute(() -> {
-            String vehicleId = vehicleStatus.getVehicleId();
+        Thread graphicsThread = new Thread(new UpdateGraphics(vehicleStatus));
+        graphicsThread.setDaemon(true);
+        graphicsThread.start();
+    }
 
-            if (vehicles.containsKey(vehicleId)) {
-                Node vehicle = paneVehicles.get(vehicleId);
+    private class UpdateGraphics extends Task<Void> {
 
-                vehicle.setTranslateX(vehicleStatus.getX());
-                vehicle.setTranslateY(vehicleStatus.getY());
-            } else {
-                vehicles.put(vehicleId, vehicleStatus);
-                Node vehicle = createVehicle(vehicleId);
+        private VehicleStatus vehicleStatus;
 
-                pane.getChildren().add(vehicle);
-                paneVehicles.put(vehicleId, vehicle);
-                vehicleIdCombo.getItems().add(vehicleId);
-            }
-        });
+        public UpdateGraphics(VehicleStatus vehicleStatus) {
+            this.vehicleStatus = vehicleStatus;
+        }
+
+        @Override
+        protected Void call() throws Exception {
+            Platform.runLater(() -> {
+                System.out.println("Updating graphics thread");
+                String vehicleId = vehicleStatus.getVehicleId();
+
+                if (vehicles.containsKey(vehicleId)) {
+                    System.out.println(String.format("Moving vehicle %s to %d,%d", vehicleId,
+                        vehicleStatus.getX(),
+                        vehicleStatus.getY()));
+                    Node vehicle = paneVehicles.get(vehicleId);
+
+                    vehicle.setTranslateX(vehicleStatus.getX());
+                    vehicle.setTranslateY(vehicleStatus.getY());
+                } else {
+                    System.out.println("Creating vehicle " + vehicleId);
+
+                    vehicles.put(vehicleId, vehicleStatus);
+                    Node vehicle = createVehicle(vehicleId);
+
+                    pane.getChildren().add(vehicle);
+                    paneVehicles.put(vehicleId, vehicle);
+                    vehicleIdCombo.getItems().add(vehicleId);
+                }
+            });
+            return null;
+        }
     }
 }

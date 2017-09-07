@@ -25,7 +25,7 @@
             <RadioButton fx:id="upDirection" layoutX="140.0" layoutY="87.0" mnemonicParsing="false" text="UP" />
             <RadioButton fx:id="downDirection" layoutX="185.0" layoutY="87.0" mnemonicParsing="false" text="DOWN" />
             <RadioButton fx:id="stop" layoutX="256.0" layoutY="87.0" mnemonicParsing="false" text="STOP" />
-            <ComboBox fx:id="vehicleId" layoutX="107.0" layoutY="47.0" onAction="#onVehicleChange" prefHeight="25.0" prefWidth="58.0" />
+            <ComboBox fx:id="vehicleIdCombo" layoutX="107.0" layoutY="47.0" onAction="#onVehicleChange" prefHeight="25.0" prefWidth="58.0" />
          </children>
       </Pane>
       <Pane fx:id="pane" layoutX="-1.0" layoutY="125.0" prefHeight="309.0" prefWidth="511.0" />

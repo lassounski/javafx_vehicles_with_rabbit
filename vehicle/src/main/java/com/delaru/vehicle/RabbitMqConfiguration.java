@@ -1,9 +1,9 @@
 package com.delaru.vehicle;
 
-import com.delaru.model.DestroyCommand;
-import com.delaru.model.MovementCommand;
+import com.delaru.model.CommandType;
 import com.delaru.rabbitmq.CommandConsumer;
 import com.delaru.rabbitmq.VehicleStatusProducer;
+
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -59,15 +59,10 @@ public class RabbitMqConfiguration {
         return new VehicleStatusProducer();
     }
 
-
-
-
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
     }
-
-
 
     @Autowired
     private CommandService commandService;
@@ -85,10 +80,10 @@ public class RabbitMqConfiguration {
     public CommandConsumer getCommandConsumer() {
         return new CommandConsumer(command -> {
             System.out.println("Received request to: " + command.getCommandType());
-            if (command instanceof DestroyCommand) {
-                commandService.destroyVehicle((DestroyCommand) command);
-            } else if (command instanceof MovementCommand) {
-                commandService.moveVehicle((MovementCommand) command);
+            if (command.getCommandType().equals(CommandType.DESTROY)) {
+                commandService.destroyVehicle(command);
+            } else if (command.getCommandType().equals(CommandType.MOVEMENT)) {
+                commandService.moveVehicle(command);
             } else {
                 commandService.createVehicle();
             }

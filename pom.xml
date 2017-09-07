@@ -21,8 +21,6 @@
         <module>rabbitmq</module>
         <module>vehicle</module>
         <module>vehicleUi</module>
-        <module>backend</module>
-        <module>frontend</module>
     </modules>
 
     <properties>
