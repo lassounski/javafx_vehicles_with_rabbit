@@ -19,8 +19,8 @@
     <modules>
         <module>model</module>
         <module>rabbitmq</module>
-        <module>vehicle</module>
-        <module>vehicleUi</module>
+        <module>vehicle_backend</module>
+        <module>vehicle_frontend</module>
     </modules>
 
     <properties>
