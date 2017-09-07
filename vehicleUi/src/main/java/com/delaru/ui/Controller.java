@@ -8,14 +8,13 @@ import com.delaru.rabbitmq.CommandProducer;
 
 import de.felixroske.jfxsupport.FXMLController;
 
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -33,38 +32,36 @@ import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 
+/**
+ * Controls the GUI. Creates/destroys vehicles and allows them to change position.
+ */
 @FXMLController
 public class Controller implements Initializable {
 
+    private final static Logger LOGGER = Logger.getLogger(Controller.class);
+    //representation of the vehicle data
     private Map<String, VehicleStatus> vehicles = new HashMap<>();
-
+    //graphical representation of the vehicles
     private Map<String, Node> paneVehicles = new HashMap<>();
-
+    //groups the movement radio buttons
     private ToggleGroup directionsGroup = new ToggleGroup();
-
-    private ExecutorService vehicleExecutorService = Executors.newFixedThreadPool(10);
 
     @FXML
     Pane pane;
-
     @FXML
     ComboBox<String> vehicleIdCombo;
-
     @FXML
     RadioButton rightDirection;
-
     @FXML
     RadioButton leftDirection;
-
     @FXML
     RadioButton upDirection;
-
     @FXML
     RadioButton downDirection;
-
     @FXML
     RadioButton stop;
 
+    //bean responsible for sending commands to the vehicle backend
     @Autowired
     private CommandProducer commandProducer;
 
@@ -91,8 +88,11 @@ public class Controller implements Initializable {
 
     @FXML
     private void removeVehicle() {
-        pane.getChildren().removeAll(paneVehicles.get(vehicleIdCombo.getValue()));
-        paneVehicles.remove(vehicleIdCombo.getValue());
+        String removedVehicleId = vehicleIdCombo.getValue();
+        pane.getChildren().removeAll(paneVehicles.get(removedVehicleId));
+        paneVehicles.remove(removedVehicleId);
+        vehicleIdCombo.getItems().remove(removedVehicleId);
+        vehicles.remove(removedVehicleId);
 
         Command removeCommand = new Command(CommandType.DESTROY, vehicleIdCombo.getValue());
         commandProducer.produce(removeCommand);
@@ -136,12 +136,19 @@ public class Controller implements Initializable {
         });
     }
 
+    /**
+     * Handles an upcoming {@link VehicleStatus} update of a certain vehicle
+     */
     public void handleVehicle(VehicleStatus vehicleStatus) {
         Thread graphicsThread = new Thread(new UpdateGraphics(vehicleStatus));
         graphicsThread.setDaemon(true);
         graphicsThread.start();
     }
 
+    /**
+     * Class that handles a {@link VehicleStatus} updated in a separate thread to allow the GUI thread to be non
+     * blocking
+     */
     private class UpdateGraphics extends Task<Void> {
 
         private VehicleStatus vehicleStatus;
@@ -153,19 +160,20 @@ public class Controller implements Initializable {
         @Override
         protected Void call() throws Exception {
             Platform.runLater(() -> {
-                System.out.println("Updating graphics thread");
+                LOGGER.debug("Updating graphics thread");
                 String vehicleId = vehicleStatus.getVehicleId();
 
                 if (vehicles.containsKey(vehicleId)) {
-                    System.out.println(String.format("Moving vehicle %s to %d,%d", vehicleId,
+                    LOGGER.debug(String.format("Moving vehicle %s to %d,%d", vehicleId,
                         vehicleStatus.getX(),
                         vehicleStatus.getY()));
+                    vehicles.get(vehicleId).setVehicleMovement(vehicleStatus.getVehicleMovement());
                     Node vehicle = paneVehicles.get(vehicleId);
 
                     vehicle.setTranslateX(vehicleStatus.getX());
                     vehicle.setTranslateY(vehicleStatus.getY());
                 } else {
-                    System.out.println("Creating vehicle " + vehicleId);
+                    LOGGER.debug("Creating vehicle " + vehicleId);
 
                     vehicles.put(vehicleId, vehicleStatus);
                     Node vehicle = createVehicle(vehicleId);

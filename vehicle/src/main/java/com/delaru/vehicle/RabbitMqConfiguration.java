@@ -4,6 +4,7 @@ import com.delaru.model.CommandType;
 import com.delaru.rabbitmq.CommandConsumer;
 import com.delaru.rabbitmq.VehicleStatusProducer;
 
+import org.apache.log4j.Logger;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -20,9 +21,10 @@ import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainer
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-
 @Configuration
 public class RabbitMqConfiguration {
+
+    private final static Logger LOGGER = Logger.getLogger(RabbitMqConfiguration.class);
 
     @Value("${com.delaru.rabbitmq.producer.vehicle.queue}")
     private String producerVehicleQueueName;
@@ -34,17 +36,17 @@ public class RabbitMqConfiguration {
     private String producerVehicleRoutingkey;
 
     @Bean
-    Queue queue() {
+    public Queue queue() {
         return new Queue(producerVehicleQueueName, false);
     }
 
     @Bean
-    DirectExchange exchange() {
+    public DirectExchange exchange() {
         return new DirectExchange(exchange);
     }
 
     @Bean
-    Binding binding(Queue queue, DirectExchange exchange) {
+    public Binding binding(Queue queue, DirectExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(producerVehicleRoutingkey);
     }
 
@@ -55,7 +57,7 @@ public class RabbitMqConfiguration {
     }
 
     @Bean
-    public VehicleStatusProducer getVehicleStatusProducer(){
+    public VehicleStatusProducer getVehicleStatusProducer() {
         return new VehicleStatusProducer();
     }
 
@@ -69,7 +71,7 @@ public class RabbitMqConfiguration {
 
     @Bean
     public SimpleRabbitListenerContainerFactory vehicleFactory(ConnectionFactory connectionFactory,
-            SimpleRabbitListenerContainerFactoryConfigurer configurer) {
+                                                               SimpleRabbitListenerContainerFactoryConfigurer configurer) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         configurer.configure(factory, connectionFactory);
         factory.setMessageConverter(jsonMessageConverter());
@@ -79,7 +81,7 @@ public class RabbitMqConfiguration {
     @Bean
     public CommandConsumer getCommandConsumer() {
         return new CommandConsumer(command -> {
-            System.out.println("Received request to: " + command.getCommandType());
+            LOGGER.debug("Received request to: " + command.getCommandType());
             if (command.getCommandType().equals(CommandType.DESTROY)) {
                 commandService.destroyVehicle(command);
             } else if (command.getCommandType().equals(CommandType.MOVEMENT)) {
